@@ -71,6 +71,7 @@ describe('Transactions History Controller (Unit)', () => {
     const testConfiguration: typeof configuration = () => ({
       ...configuration(),
       mappings: {
+        ...configuration().mappings,
         history: {
           maxNestedTransfers: 5,
         },

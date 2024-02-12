@@ -130,6 +130,9 @@ export default (): ReturnType<typeof configuration> => ({
     history: {
       maxNestedTransfers: faker.number.int({ min: 1, max: 5 }),
     },
+    safe: {
+      maxOverviews: faker.number.int({ min: 1, max: 5 }),
+    },
   },
   prices: {
     baseUri: faker.internet.url({ appendSlash: false }),
