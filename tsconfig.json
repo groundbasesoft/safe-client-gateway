@@ -21,5 +21,6 @@
       "@/*": ["src/*"],
     },
     "strict": true,
+    "strictNullChecks": true,
   },
 }
