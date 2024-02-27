@@ -9,6 +9,7 @@ import {
   ZerionCollectible,
   ZerionCollectibles,
 } from '@/datasources/balances-api/entities/zerion-collectible.entity';
+import { ZerionLimitReachedError } from '@/datasources/balances-api/errors/zerion-limit-reached.error';
 import { CacheFirstDataSource } from '@/datasources/cache/cache.first.data.source';
 import { CacheRouter } from '@/datasources/cache/cache.router';
 import {
@@ -25,6 +26,7 @@ import { Collectible } from '@/domain/collectibles/entities/collectible.entity';
 import { getNumberString } from '@/domain/common/utils/utils';
 import { Page } from '@/domain/entities/page.entity';
 import { IBalancesApi } from '@/domain/interfaces/balances-api.interface';
+import { LoggingService, ILoggingService } from '@/logging/logging.interface';
 import { Inject, Injectable } from '@nestjs/common';
 
 export const IZerionBalancesApi = Symbol('IZerionBalancesApi');
@@ -38,9 +40,12 @@ export class ZerionBalancesApi implements IBalancesApi {
   private readonly defaultExpirationTimeInSeconds: number;
   private readonly defaultNotFoundExpirationTimeSeconds: number;
   private readonly fiatCodes: string[];
+  // Number of Zerion requests per ttl
+  private readonly limit: number;
 
   constructor(
     @Inject(CacheService) private readonly cacheService: ICacheService,
+    @Inject(LoggingService) private readonly loggingService: ILoggingService,
     @Inject(IConfigurationService)
     private readonly configurationService: IConfigurationService,
     private readonly dataSource: CacheFirstDataSource,
@@ -66,6 +71,9 @@ export class ZerionBalancesApi implements IBalancesApi {
     this.fiatCodes = this.configurationService
       .getOrThrow<string[]>('balances.providers.zerion.currencies')
       .map((currency) => currency.toUpperCase());
+    this.limit = configurationService.getOrThrow(
+      'balances.providers.zerion.limit',
+    );
   }
 
   async getBalances(args: {
@@ -74,6 +82,7 @@ export class ZerionBalancesApi implements IBalancesApi {
     fiatCode: string;
   }): Promise<Balance[]> {
     try {
+      await this._checkRateLimit();
       const cacheDir = CacheRouter.getZerionBalancesCacheDir(args);
       const chainName = this._getChainName(args.chainId);
       const currency = args.fiatCode.toLowerCase();
@@ -288,5 +297,14 @@ export class ZerionBalancesApi implements IBalancesApi {
       );
     }
     return zerionUrl.toString();
+  }
+
+  private async _checkRateLimit(): Promise<void> {
+    const current = 0; // TODO:
+    if (current > this.limit) {
+      const error = new ZerionLimitReachedError(current, this.limit);
+      this.loggingService.info(error.message);
+      throw error;
+    }
   }
 }
