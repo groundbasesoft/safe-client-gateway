@@ -42,4 +42,23 @@ describe('FakeCacheService', () => {
     expect(target.keyCount()).toBe(1);
     jest.useRealTimers();
   });
+
+  it('clears keys', async () => {
+    const expireTimeSeconds = faker.number.int({ min: 1 });
+    const actions: Promise<void>[] = [];
+    for (let i = 0; i < 5; i++) {
+      actions.push(
+        target.setWithExpiration(
+          new CacheDir(`key${i}`, `field${i}`),
+          `value${i}`,
+          expireTimeSeconds,
+        ),
+      );
+    }
+
+    await Promise.all(actions);
+    target.clear();
+
+    expect(target.keyCount()).toBe(0);
+  });
 });
