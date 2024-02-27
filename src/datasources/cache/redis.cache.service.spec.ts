@@ -44,6 +44,7 @@ describe('RedisCacheService', () => {
       throw Error(`Unexpected key: ${key}`);
     });
 
+    await redisClient.flushAll();
     redisCacheService = new RedisCacheService(
       redisClient,
       mockLoggingService,
@@ -52,49 +53,87 @@ describe('RedisCacheService', () => {
     );
   });
 
-  it('Setting key without setting expireTimeSeconds does not store the value', async () => {
-    const cacheDir = new CacheDir(
-      faker.string.alphanumeric(),
-      faker.string.sample(),
-    );
-    const value = fakeJson();
+  describe('CacheService.setWithExpiration', () => {
+    it('Setting key without setting expireTimeSeconds does not store the value', async () => {
+      const cacheDir = new CacheDir(
+        faker.string.alphanumeric(),
+        faker.string.sample(),
+      );
+      const value = fakeJson();
 
-    await redisCacheService.setWithExpiration(cacheDir, value, undefined);
+      await redisCacheService.setWithExpiration(cacheDir, value, undefined);
 
-    const storedValue = await redisClient.hGet(cacheDir.key, cacheDir.field);
-    expect(storedValue).toBeNull();
+      const storedValue = await redisClient.hGet(cacheDir.key, cacheDir.field);
+      expect(storedValue).toBeNull();
+    });
+
+    it('Setting key with expireTimeSeconds does store the value with the provided TTL', async () => {
+      const cacheDir = new CacheDir(
+        faker.string.alphanumeric(),
+        faker.string.sample(),
+      );
+      const value = fakeJson();
+      const expireTime = faker.number.int();
+
+      await redisCacheService.setWithExpiration(cacheDir, value, expireTime);
+
+      const storedValue = await redisClient.hGet(cacheDir.key, cacheDir.field);
+      const ttl = await redisClient.ttl(cacheDir.key);
+      expect(storedValue).toEqual(value);
+      expect(ttl).toBeGreaterThan(0);
+      expect(ttl).toBeLessThanOrEqual(expireTime);
+    });
+
+    it('Setting key throws on expire', async () => {
+      const cacheDir = new CacheDir(
+        faker.string.alphanumeric(),
+        faker.string.sample(),
+      );
+
+      // Expiration time out of range to force an error
+      await expect(
+        redisCacheService.setWithExpiration(cacheDir, '', Number.MAX_VALUE + 1),
+      ).rejects.toThrow();
+
+      const storedValue = await redisClient.hGet(cacheDir.key, cacheDir.field);
+      expect(storedValue).toBeNull();
+    });
   });
 
-  it('Setting key with expireTimeSeconds does store the value with the provided TTL', async () => {
-    const cacheDir = new CacheDir(
-      faker.string.alphanumeric(),
-      faker.string.sample(),
-    );
-    const value = fakeJson();
-    const expireTime = faker.number.int();
+  describe('CacheService.set', () => {
+    it('Setting key stores the value with no TTL', async () => {
+      const cacheDir = new CacheDir(
+        faker.string.alphanumeric(),
+        faker.string.sample(),
+      );
 
-    await redisCacheService.setWithExpiration(cacheDir, value, expireTime);
+      const value = fakeJson();
+      await expect(redisCacheService.set(cacheDir, value));
 
-    const storedValue = await redisClient.hGet(cacheDir.key, cacheDir.field);
-    const ttl = await redisClient.ttl(cacheDir.key);
-    expect(storedValue).toEqual(value);
-    expect(ttl).toBeGreaterThan(0);
-    expect(ttl).toBeLessThanOrEqual(expireTime);
-  });
+      const storedValue = await redisClient.hGet(cacheDir.key, cacheDir.field);
+      const ttl = await redisClient.ttl(cacheDir.key);
+      expect(storedValue).toEqual(value);
+      expect(ttl).toEqual(-1);
+    });
 
-  it('Setting key throws on expire', async () => {
-    const cacheDir = new CacheDir(
-      faker.string.alphanumeric(),
-      faker.string.sample(),
-    );
+    it('Setting key stores the value but does not modify the previous TTL, if any', async () => {
+      const cacheDir = new CacheDir(
+        faker.string.alphanumeric(),
+        faker.string.sample(),
+      );
 
-    // Expiration time out of range to force an error
-    await expect(
-      redisCacheService.setWithExpiration(cacheDir, '', Number.MAX_VALUE + 1),
-    ).rejects.toThrow();
+      const value = fakeJson();
+      const expireTime = faker.number.int();
+      await expect(
+        redisCacheService.setWithExpiration(cacheDir, value, expireTime),
+      );
+      await expect(redisCacheService.set(cacheDir, value));
 
-    const storedValue = await redisClient.hGet(cacheDir.key, cacheDir.field);
-    expect(storedValue).toBeNull();
+      const storedValue = await redisClient.hGet(cacheDir.key, cacheDir.field);
+      const ttl = await redisClient.ttl(cacheDir.key);
+      expect(storedValue).toEqual(value);
+      expect(ttl).toEqual(expireTime);
+    });
   });
 
   it('Getting key gets the stored value', async () => {
