@@ -61,7 +61,7 @@ describe('RedisCacheService with a Key Prefix', () => {
     const value = fakeJson();
     const expireTime = faker.number.int();
 
-    await redisCacheService.set(cacheDir, value, expireTime);
+    await redisCacheService.setWithExpiration(cacheDir, value, expireTime);
 
     expect(redisClientTypeMock.hSet).toHaveBeenCalledWith(
       `${keyPrefix}-${cacheDir.key}`,

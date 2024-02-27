@@ -43,6 +43,7 @@ describe('CacheFirstDataSource', () => {
   it('should return the data returned by the underlying network interface and cache it', async () => {
     const targetUrl = faker.internet.url({ appendSlash: false });
     const cacheDir = new CacheDir(faker.word.sample(), faker.word.sample());
+    const expireTimeSeconds = faker.number.int({ min: 1 });
     const notFoundExpireTimeSeconds = faker.number.int();
     const data = JSON.parse(fakeJson());
     mockNetworkService.get.mockImplementation((url) => {
@@ -58,6 +59,7 @@ describe('CacheFirstDataSource', () => {
       cacheDir,
       url: targetUrl,
       notFoundExpireTimeSeconds,
+      expireTimeSeconds,
     });
 
     expect(actual).toEqual(data);
@@ -71,12 +73,14 @@ describe('CacheFirstDataSource', () => {
   it('should return the network data and it should cache it if the last invalidation happened before the request was initiated', async () => {
     const targetUrl = faker.internet.url({ appendSlash: false });
     const cacheDir = new CacheDir(faker.word.sample(), faker.word.sample());
+    const expireTimeSeconds = faker.number.int({ min: 1 });
     const notFoundExpireTimeSeconds = faker.number.int();
     const data = JSON.parse(fakeJson());
     const invalidationTimeMs = jest.now(); // invalidation happens at this point in time
-    await fakeCacheService.set(
+    await fakeCacheService.setWithExpiration(
       new CacheDir(`invalidationTimeMs:${cacheDir.key}`, ''),
       invalidationTimeMs.toString(),
+      expireTimeSeconds,
     );
     mockNetworkService.get.mockImplementation((url) => {
       switch (url) {
@@ -92,6 +96,7 @@ describe('CacheFirstDataSource', () => {
       cacheDir,
       url: targetUrl,
       notFoundExpireTimeSeconds,
+      expireTimeSeconds,
     });
 
     expect(actual).toEqual(data);
@@ -103,12 +108,14 @@ describe('CacheFirstDataSource', () => {
   it('should return the network data but it should not cache it if the last invalidation happened after the request was initiated', async () => {
     const targetUrl = faker.internet.url({ appendSlash: false });
     const cacheDir = new CacheDir(faker.word.sample(), faker.word.sample());
+    const expireTimeSeconds = faker.number.int({ min: 1 });
     const notFoundExpireTimeSeconds = faker.number.int();
     const data = JSON.parse(fakeJson());
     const invalidationTimeMs = jest.now() + 1; // invalidation happens 1 ms after this point in time
-    await fakeCacheService.set(
+    await fakeCacheService.setWithExpiration(
       new CacheDir(`invalidationTimeMs:${cacheDir.key}`, ''),
       invalidationTimeMs.toString(),
+      expireTimeSeconds,
     );
     mockNetworkService.get.mockImplementation((url) => {
       switch (url) {
@@ -124,6 +131,7 @@ describe('CacheFirstDataSource', () => {
       cacheDir,
       url: targetUrl,
       notFoundExpireTimeSeconds,
+      expireTimeSeconds,
     });
 
     expect(actual).toEqual(data);
@@ -134,9 +142,14 @@ describe('CacheFirstDataSource', () => {
 
   it('should return the cached data without calling the underlying network interface', async () => {
     const cacheDir = new CacheDir(faker.word.sample(), faker.word.sample());
+    const expireTimeSeconds = faker.number.int({ min: 1 });
     const notFoundExpireTimeSeconds = faker.number.int();
     const rawJson = fakeJson();
-    await fakeCacheService.set(cacheDir, rawJson);
+    await fakeCacheService.setWithExpiration(
+      cacheDir,
+      rawJson,
+      expireTimeSeconds,
+    );
     mockNetworkService.get.mockImplementation((url) =>
       Promise.reject(`Unexpected request to ${url}`),
     );
@@ -145,6 +158,7 @@ describe('CacheFirstDataSource', () => {
       cacheDir,
       url: faker.internet.url({ appendSlash: false }),
       notFoundExpireTimeSeconds,
+      expireTimeSeconds,
     });
 
     expect(actual).toEqual(JSON.parse(rawJson));
@@ -157,6 +171,7 @@ describe('CacheFirstDataSource', () => {
     const expectedError = new NetworkResponseError(new URL(targetUrl), {
       status: 404,
     } as Response);
+    const expireTimeSeconds = faker.number.int({ min: 1 });
     const notFoundExpireTimeSeconds = faker.number.int();
     mockNetworkService.get.mockImplementation((url) => {
       switch (url) {
@@ -172,6 +187,7 @@ describe('CacheFirstDataSource', () => {
         cacheDir,
         url: targetUrl,
         notFoundExpireTimeSeconds,
+        expireTimeSeconds,
       }),
     ).rejects.toThrow(expectedError);
 
@@ -182,6 +198,7 @@ describe('CacheFirstDataSource', () => {
   it('should return a 404 cached error without a second call to the underlying network interface', async () => {
     const targetUrl = faker.internet.url({ appendSlash: false });
     const cacheDir = new CacheDir(faker.word.sample(), faker.word.sample());
+    const expireTimeSeconds = faker.number.int({ min: 1 });
     const notFoundExpireTimeSeconds = faker.number.int();
     const expectedError = new NetworkResponseError(new URL(targetUrl), {
       status: 404,
@@ -200,6 +217,7 @@ describe('CacheFirstDataSource', () => {
         cacheDir,
         url: targetUrl,
         notFoundExpireTimeSeconds,
+        expireTimeSeconds,
       }),
     ).rejects.toThrow(expectedError);
 
@@ -208,6 +226,7 @@ describe('CacheFirstDataSource', () => {
         cacheDir,
         url: targetUrl,
         notFoundExpireTimeSeconds,
+        expireTimeSeconds,
       }),
     ).rejects.toThrow(expectedError);
 
@@ -218,7 +237,7 @@ describe('CacheFirstDataSource', () => {
   it('should cache not found errors with the default TTL', async () => {
     const mockCache = jest.mocked({
       get: jest.fn(),
-      set: jest.fn(),
+      setWithExpiration: jest.fn(),
     } as jest.MockedObjectDeep<ICacheService>);
 
     cacheFirstDataSource = new CacheFirstDataSource(
@@ -229,6 +248,7 @@ describe('CacheFirstDataSource', () => {
 
     const targetUrl = faker.internet.url({ appendSlash: false });
     const cacheDir = new CacheDir(faker.word.sample(), faker.word.sample());
+    const expireTimeSeconds = faker.number.int({ min: 1 });
     const notFoundExpireTimeSeconds = faker.number.int();
     const expectedError = new NetworkResponseError(new URL(targetUrl), {
       status: 404,
@@ -248,10 +268,11 @@ describe('CacheFirstDataSource', () => {
         cacheDir,
         url: targetUrl,
         notFoundExpireTimeSeconds,
+        expireTimeSeconds,
       }),
     ).rejects.toThrow(expectedError);
 
-    expect(mockCache.set).toHaveBeenCalledWith(
+    expect(mockCache.setWithExpiration).toHaveBeenCalledWith(
       cacheDir,
       expect.anything(),
       notFoundExpireTimeSeconds,
@@ -261,7 +282,7 @@ describe('CacheFirstDataSource', () => {
   it('should cache not found errors with a specific TTL', async () => {
     const mockCache = jest.mocked({
       get: jest.fn(),
-      set: jest.fn(),
+      setWithExpiration: jest.fn(),
     } as jest.MockedObjectDeep<ICacheService>);
 
     cacheFirstDataSource = new CacheFirstDataSource(
@@ -276,6 +297,7 @@ describe('CacheFirstDataSource', () => {
       status: 404,
     } as Response);
     const notFoundExpireTimeSeconds = faker.number.int();
+    const expireTimeSeconds = faker.number.int({ min: 1 });
     mockCache.get.mockResolvedValue(undefined);
     mockNetworkService.get.mockImplementation((url) => {
       switch (url) {
@@ -291,11 +313,11 @@ describe('CacheFirstDataSource', () => {
         cacheDir,
         url: targetUrl,
         notFoundExpireTimeSeconds,
-        expireTimeSeconds: faker.number.int(),
+        expireTimeSeconds,
       }),
     ).rejects.toThrow(expectedError);
 
-    expect(mockCache.set).toHaveBeenCalledWith(
+    expect(mockCache.setWithExpiration).toHaveBeenCalledWith(
       cacheDir,
       expect.anything(),
       notFoundExpireTimeSeconds,

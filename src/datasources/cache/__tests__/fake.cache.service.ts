@@ -4,6 +4,7 @@ import { CacheDir } from '@/datasources/cache/entities/cache-dir.entity';
 export class FakeCacheService implements ICacheService {
   private cache: Record<string, Record<string, string>> = {};
   private isReady: boolean = true;
+  private expirationTimeInSeconds: number = 10;
 
   ping(): Promise<unknown> {
     return this.isReady ? Promise.resolve() : Promise.reject();
@@ -23,9 +24,10 @@ export class FakeCacheService implements ICacheService {
 
   async deleteByKey(key: string): Promise<number> {
     delete this.cache[key];
-    await this.set(
+    await this.setWithExpiration(
       new CacheDir(`invalidationTimeMs:${key}`, ''),
       Date.now().toString(),
+      this.expirationTimeInSeconds,
     );
     return Promise.resolve(1);
   }
@@ -36,12 +38,23 @@ export class FakeCacheService implements ICacheService {
     return Promise.resolve(this.cache[cacheDir.key][cacheDir.field]);
   }
 
-  set(
+  set(cacheDir: CacheDir, value: string): Promise<void> {
+    const fields = this.cache[cacheDir.key];
+    if (fields === undefined) {
+      this.cache[cacheDir.key] = {};
+    }
+    this.cache[cacheDir.key][cacheDir.field] = value;
+    return Promise.resolve();
+  }
+
+  setWithExpiration(
     cacheDir: CacheDir,
     value: string,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     expireTimeSeconds?: number,
   ): Promise<void> {
+    if (!expireTimeSeconds || expireTimeSeconds <= 0) {
+      return Promise.resolve();
+    }
     const fields = this.cache[cacheDir.key];
     if (fields === undefined) {
       this.cache[cacheDir.key] = {};

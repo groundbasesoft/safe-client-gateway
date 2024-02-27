@@ -59,7 +59,7 @@ describe('RedisCacheService', () => {
     );
     const value = fakeJson();
 
-    await redisCacheService.set(cacheDir, value, undefined);
+    await redisCacheService.setWithExpiration(cacheDir, value, undefined);
 
     const storedValue = await redisClient.hGet(cacheDir.key, cacheDir.field);
     expect(storedValue).toBeNull();
@@ -73,7 +73,7 @@ describe('RedisCacheService', () => {
     const value = fakeJson();
     const expireTime = faker.number.int();
 
-    await redisCacheService.set(cacheDir, value, expireTime);
+    await redisCacheService.setWithExpiration(cacheDir, value, expireTime);
 
     const storedValue = await redisClient.hGet(cacheDir.key, cacheDir.field);
     const ttl = await redisClient.ttl(cacheDir.key);
@@ -90,7 +90,7 @@ describe('RedisCacheService', () => {
 
     // Expiration time out of range to force an error
     await expect(
-      redisCacheService.set(cacheDir, '', Number.MAX_VALUE + 1),
+      redisCacheService.setWithExpiration(cacheDir, '', Number.MAX_VALUE + 1),
     ).rejects.toThrow();
 
     const storedValue = await redisClient.hGet(cacheDir.key, cacheDir.field);

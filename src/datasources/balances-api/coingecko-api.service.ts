@@ -242,7 +242,7 @@ export class CoingeckoApi implements IPricesApi {
         const price: AssetPrice = validPrice
           ? { [tokenAddress]: { [args.fiatCode]: validPrice } }
           : { [tokenAddress]: { [args.fiatCode]: null } };
-        await this.cacheService.set(
+        await this.cacheService.setWithExpiration(
           CacheRouter.getTokenPriceCacheDir({ ...args, tokenAddress }),
           JSON.stringify(price),
           validPrice

@@ -15,8 +15,9 @@ describe('FakeCacheService', () => {
       faker.string.alphanumeric(),
     );
     const value = faker.string.alphanumeric();
+    const expireTimeSeconds = faker.number.int({ min: 1 });
 
-    await target.set(cacheDir, value, 0);
+    await target.setWithExpiration(cacheDir, value, expireTimeSeconds);
 
     await expect(target.get(cacheDir)).resolves.toBe(value);
     expect(target.keyCount()).toBe(1);
@@ -29,8 +30,9 @@ describe('FakeCacheService', () => {
     const field = faker.string.alphanumeric();
     const cacheDir = new CacheDir(key, field);
     const value = faker.string.alphanumeric();
+    const expireTimeSeconds = faker.number.int({ min: 1 });
 
-    await target.set(cacheDir, value, 0);
+    await target.setWithExpiration(cacheDir, value, expireTimeSeconds);
     await target.deleteByKey(key);
 
     await expect(target.get(cacheDir)).resolves.toBe(undefined);
@@ -39,19 +41,5 @@ describe('FakeCacheService', () => {
     ).resolves.toBe(now.toString());
     expect(target.keyCount()).toBe(1);
     jest.useRealTimers();
-  });
-
-  it('clears keys', async () => {
-    const actions: Promise<void>[] = [];
-    for (let i = 0; i < 5; i++) {
-      actions.push(
-        target.set(new CacheDir(`key${i}`, `field${i}`), `value${i}`, 0),
-      );
-    }
-
-    await Promise.all(actions);
-    target.clear();
-
-    expect(target.keyCount()).toBe(0);
   });
 });

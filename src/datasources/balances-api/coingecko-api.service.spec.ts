@@ -17,7 +17,7 @@ const mockCacheFirstDataSource = jest.mocked({
 const mockCacheService = jest.mocked({
   deleteByKey: jest.fn(),
   get: jest.fn(),
-  set: jest.fn(),
+  setWithExpiration: jest.fn(),
 } as jest.MockedObjectDeep<ICacheService>);
 
 const mockNetworkService = jest.mocked({
@@ -178,8 +178,8 @@ describe('CoingeckoAPI', () => {
     );
     expect(mockCacheService.get).toHaveBeenCalledTimes(1);
     expect(mockCacheService.get).toHaveBeenCalledWith(expectedCacheDir);
-    expect(mockCacheService.set).toHaveBeenCalledTimes(1);
-    expect(mockCacheService.set).toHaveBeenCalledWith(
+    expect(mockCacheService.setWithExpiration).toHaveBeenCalledTimes(1);
+    expect(mockCacheService.setWithExpiration).toHaveBeenCalledWith(
       expectedCacheDir,
       JSON.stringify({ [tokenAddress]: { [lowerCaseFiatCode]: price } }),
       pricesCacheTtlSeconds,
@@ -238,8 +238,8 @@ describe('CoingeckoAPI', () => {
     );
     expect(mockCacheService.get).toHaveBeenCalledTimes(1);
     expect(mockCacheService.get).toHaveBeenCalledWith(expectedCacheDir);
-    expect(mockCacheService.set).toHaveBeenCalledTimes(1);
-    expect(mockCacheService.set).toHaveBeenCalledWith(
+    expect(mockCacheService.setWithExpiration).toHaveBeenCalledTimes(1);
+    expect(mockCacheService.setWithExpiration).toHaveBeenCalledWith(
       expectedCacheDir,
       JSON.stringify({ [tokenAddress]: { [lowerCaseFiatCode]: price } }),
       pricesCacheTtlSeconds,
@@ -322,8 +322,8 @@ describe('CoingeckoAPI', () => {
         '',
       ),
     );
-    expect(mockCacheService.set).toHaveBeenCalledTimes(3);
-    expect(mockCacheService.set).toHaveBeenCalledWith(
+    expect(mockCacheService.setWithExpiration).toHaveBeenCalledTimes(3);
+    expect(mockCacheService.setWithExpiration).toHaveBeenCalledWith(
       new CacheDir(
         `${chainName}_token_price_${firstTokenAddress}_${lowerCaseFiatCode}`,
         '',
@@ -333,7 +333,7 @@ describe('CoingeckoAPI', () => {
       }),
       pricesCacheTtlSeconds,
     );
-    expect(mockCacheService.set).toHaveBeenCalledWith(
+    expect(mockCacheService.setWithExpiration).toHaveBeenCalledWith(
       new CacheDir(
         `${chainName}_token_price_${secondTokenAddress}_${lowerCaseFiatCode}`,
         '',
@@ -343,7 +343,7 @@ describe('CoingeckoAPI', () => {
       }),
       pricesCacheTtlSeconds,
     );
-    expect(mockCacheService.set).toHaveBeenCalledWith(
+    expect(mockCacheService.setWithExpiration).toHaveBeenCalledWith(
       new CacheDir(
         `${chainName}_token_price_${thirdTokenAddress}_${lowerCaseFiatCode}`,
         '',
@@ -437,8 +437,8 @@ describe('CoingeckoAPI', () => {
         '',
       ),
     );
-    expect(mockCacheService.set).toHaveBeenCalledTimes(2);
-    expect(mockCacheService.set).toHaveBeenNthCalledWith(
+    expect(mockCacheService.setWithExpiration).toHaveBeenCalledTimes(2);
+    expect(mockCacheService.setWithExpiration).toHaveBeenNthCalledWith(
       1,
       new CacheDir(
         `${chainName}_token_price_${firstTokenAddress}_${lowerCaseFiatCode}`,
@@ -449,7 +449,7 @@ describe('CoingeckoAPI', () => {
       }),
       pricesCacheTtlSeconds,
     );
-    expect(mockCacheService.set).toHaveBeenNthCalledWith(
+    expect(mockCacheService.setWithExpiration).toHaveBeenNthCalledWith(
       2,
       new CacheDir(
         `${chainName}_token_price_${thirdTokenAddress}_${lowerCaseFiatCode}`,
@@ -544,16 +544,20 @@ describe('CoingeckoAPI', () => {
         '',
       ),
     );
-    expect(mockCacheService.set).toHaveBeenCalledTimes(1);
-    expect(mockCacheService.set.mock.calls[0][1]).toEqual(
+    expect(mockCacheService.setWithExpiration).toHaveBeenCalledTimes(1);
+    expect(mockCacheService.setWithExpiration.mock.calls[0][1]).toEqual(
       JSON.stringify({ [thirdTokenAddress]: { [lowerCaseFiatCode]: null } }),
     );
-    expect(mockCacheService.set.mock.calls[0][2]).toBeGreaterThanOrEqual(
+    expect(
+      mockCacheService.setWithExpiration.mock.calls[0][2],
+    ).toBeGreaterThanOrEqual(
       (fakeConfigurationService.get(
         'balances.providers.safe.prices.notFoundPriceTtlSeconds',
       ) as number) - CoingeckoApi.notFoundTtlRangeSeconds,
     );
-    expect(mockCacheService.set.mock.calls[0][2]).toBeLessThanOrEqual(
+    expect(
+      mockCacheService.setWithExpiration.mock.calls[0][2],
+    ).toBeLessThanOrEqual(
       (fakeConfigurationService.get(
         'balances.providers.safe.prices.notFoundPriceTtlSeconds',
       ) as number) + CoingeckoApi.notFoundTtlRangeSeconds,

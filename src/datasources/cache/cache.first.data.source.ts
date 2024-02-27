@@ -106,7 +106,7 @@ export class CacheFirstDataSource {
 
     const shouldBeCached = await this._shouldBeCached(key, startTimeMs);
     if (shouldBeCached) {
-      await this.cacheService.set(
+      await this.cacheService.setWithExpiration(
         args.cacheDir,
         JSON.stringify(data),
         args.expireTimeSeconds,
@@ -153,7 +153,7 @@ export class CacheFirstDataSource {
     error: NetworkResponseError,
     notFoundExpireTimeSeconds?: number,
   ): Promise<void> {
-    return this.cacheService.set(
+    return this.cacheService.setWithExpiration(
       cacheDir,
       JSON.stringify({
         data: error.data,

@@ -16,7 +16,7 @@ const mockDataSource = jest.mocked(dataSource);
 
 const cacheService = {
   deleteByKey: jest.fn(),
-  set: jest.fn(),
+  setWithExpiration: jest.fn(),
 } as jest.MockedObjectDeep<ICacheService>;
 const mockCacheService = jest.mocked(cacheService);
 
