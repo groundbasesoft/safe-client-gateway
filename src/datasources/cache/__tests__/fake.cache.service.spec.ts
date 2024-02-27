@@ -9,7 +9,7 @@ describe('FakeCacheService', () => {
     target = new FakeCacheService();
   });
 
-  it('sets key', async () => {
+  it('sets key with expiration time', async () => {
     const cacheDir = new CacheDir(
       faker.string.alphanumeric(),
       faker.string.alphanumeric(),
@@ -18,6 +18,19 @@ describe('FakeCacheService', () => {
     const expireTimeSeconds = faker.number.int({ min: 1 });
 
     await target.setWithExpiration(cacheDir, value, expireTimeSeconds);
+
+    await expect(target.get(cacheDir)).resolves.toBe(value);
+    expect(target.keyCount()).toBe(1);
+  });
+
+  it('sets key without expiration time', async () => {
+    const cacheDir = new CacheDir(
+      faker.string.alphanumeric(),
+      faker.string.alphanumeric(),
+    );
+    const value = faker.string.alphanumeric();
+
+    await target.set(cacheDir, value);
 
     await expect(target.get(cacheDir)).resolves.toBe(value);
     expect(target.keyCount()).toBe(1);
