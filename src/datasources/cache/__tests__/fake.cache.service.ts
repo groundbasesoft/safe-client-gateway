@@ -55,11 +55,6 @@ export class FakeCacheService implements ICacheService {
     if (!expireTimeSeconds || expireTimeSeconds <= 0) {
       return Promise.resolve();
     }
-    const fields = this.cache[cacheDir.key];
-    if (fields === undefined) {
-      this.cache[cacheDir.key] = {};
-    }
-    this.cache[cacheDir.key][cacheDir.field] = value;
-    return Promise.resolve();
+    return this.set(cacheDir, value);
   }
 }

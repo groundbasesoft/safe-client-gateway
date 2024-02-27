@@ -70,6 +70,32 @@ describe('CacheFirstDataSource', () => {
     );
   });
 
+  it('should return the data returned by the underlying network interface without caching it if the expiration time is 0', async () => {
+    const targetUrl = faker.internet.url({ appendSlash: false });
+    const cacheDir = new CacheDir(faker.word.sample(), faker.word.sample());
+    const notFoundExpireTimeSeconds = faker.number.int();
+    const data = JSON.parse(fakeJson());
+    mockNetworkService.get.mockImplementation((url) => {
+      switch (url) {
+        case targetUrl:
+          return Promise.resolve({ data, status: 200 });
+        default:
+          return Promise.reject(`No matching rule for url: ${url}`);
+      }
+    });
+
+    const actual = await cacheFirstDataSource.get({
+      cacheDir,
+      url: targetUrl,
+      notFoundExpireTimeSeconds,
+      expireTimeSeconds: 0,
+    });
+
+    expect(actual).toEqual(data);
+    expect(mockNetworkService.get).toHaveBeenCalledTimes(1);
+    expect(fakeCacheService.keyCount()).toBe(0);
+  });
+
   it('should return the network data and it should cache it if the last invalidation happened before the request was initiated', async () => {
     const targetUrl = faker.internet.url({ appendSlash: false });
     const cacheDir = new CacheDir(faker.word.sample(), faker.word.sample());
